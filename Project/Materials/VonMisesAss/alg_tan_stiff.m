@@ -1,7 +1,11 @@
-function Dat = alg_tan_stiff(es, dl, De, da)
+function Dat = alg_tan_stiff(es, dl, Dstar, da)
+if (sum(abs(es)) == 0)
+    Dat = Dstar;
+    return
+end
 [dfds, ddfdsds] = fgrad(es);
-Da = inv(inv(De) + dl*ddfdsds);
-H = -1*da;
+Da = inv(inv(Dstar) + dl*ddfdsds);
+H = -da;
 A = dfds'*Da*dfds - H;
 Dat = Da - 1/A*Da*(dfds*dfds')*Da;
 end

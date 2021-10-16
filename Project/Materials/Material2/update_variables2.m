@@ -1,5 +1,5 @@
-function [es, dl, peteff] = update_variables2(es_old, peteff_old, ...
+function [es, dl, ep_eff_k] = update_variables2(es_old, ep_eff_old, ...
     deps, De, mp)
 sy = @(x) yieldstress2(x, mp);
-[es, dl, peteff] = update_variables(es_old, peteff_old, deps, De, sy);
+[es, dl, ep_eff_k] = update_variables(es_old, ep_eff_old, deps, De, sy);
 end
