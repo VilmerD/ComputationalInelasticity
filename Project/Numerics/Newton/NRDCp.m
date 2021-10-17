@@ -42,6 +42,7 @@ U = zeros(ndof, nsteps);
 es_old = zeros(3, nelm);
 et_old = zeros(3, nelm);
 ep_eff_old = zeros(nelm, 1);
+dl_old = zeros(nelm, 1);
 
 es = zeros(3, nelm);
 et = zeros(3, nelm);
@@ -62,20 +63,23 @@ for k = 1:nsteps
         % New algorithmic tangent each correction step
         
         % Stiffness matrix
-        X = zeros(nelm*nne, 1);
+%         X = zeros(nelm*nne, 1);
+        K = zeros(ndof);
         for elm = 1:nelm
             % Extracting dofs, coords, disps
+            elmdof = edof(elm, 2:end);
             exk = ec(elm, 1:2:end);
             eyk = ec(elm, 2:2:end);
             
             % Computing strains and then tangent material
-            Dk = Dats(es_old(:, elm), dl(elm), ep_eff_old(elm), Dstar, mp);
+            Dk = Dats(es_old(:, elm), dl_old(elm), ep_eff_old(elm), Dstar, mp);
             
             [Ke, ~] = plante(exk, eyk, ep, Dk, eq);
-            k0 = ((elm - 1)*nne + 1); ke = (elm*nne);   % Indices of entries
-            X(k0:ke) = Ke(:);
+%             k0 = ((elm - 1)*nne + 1); ke = (elm*nne);   % Indices of entries
+%             X(k0:ke) = Ke(:);
+            K(elmdof, elmdof) = K(elmdof, elmdof) + Ke;
         end
-        K = sparse(I, J, X);
+%         K = sparse(I, J, X);
         
         % Solving lienar system
         du = solveq(K, -res, [np bci]);
@@ -91,8 +95,9 @@ for k = 1:nsteps
             elmdof = edof(elm, 2:end);
             
             % Computing strains and then stresses
+            delta_et = et(:, elm) - et_old(:, elm);
             [esk, dlk, ep_eff_k] = update_vars(es_old(:, elm), ...
-                ep_eff_old(elm), et(:, elm) - et_old(:, elm), Dstar, mp);
+                ep_eff_old(elm), delta_et, Dstar, mp);
             es(:, elm) = esk;
             dl(elm) = dlk;
             ep_eff(elm) = ep_eff_k;
@@ -111,6 +116,7 @@ for k = 1:nsteps
     es_old = es;
     et_old = et;
     ep_eff_old = ep_eff;
+    dl_old = dl;
     
     % Display some information
     fprintf('Step %i\n#lineqs: %i\n', k, nsteps);
