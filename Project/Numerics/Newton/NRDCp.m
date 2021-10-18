@@ -2,19 +2,6 @@ function [P, U] = NRDCp(edof, ec, I, J, uload, np, Dstar, update_vars, ...
     Dats, mp, ep)
 % NRFCSS loads the structure and computes the displacement with a
 % Newton-Raphson scheme
-%
-% update_vars   is assumed to be a function of
-%                   - es_old
-%                   - ep_eff_old
-%                   - delta_eps
-%
-%               meaning Dstar and mp are already filled in
-%
-% Dats          is assumed to be a function of
-%                   - es_old
-%                   - dl
-%                   - ep_eff_old
-%               meaning Dstar and np are already filled in
 
 % Relative tolerance
 rtol = 1e-6;
@@ -42,18 +29,15 @@ U = zeros(ndof, nsteps);
 es_old = zeros(3, nelm);
 et_old = zeros(3, nelm);
 ep_eff_old = zeros(nelm, 1);
-dl_old = zeros(nelm, 1);
-
-es = zeros(3, nelm);
-et = zeros(3, nelm);
-ep_eff = zeros(nelm, 1);
-dl = zeros(nelm, 1);
 for k = 1:nsteps
     %%% Taking initial step %%%
     res = zeros(ndof, 1);
     uk = U(:, k);
-    fk = P(:, k);
+    fk = zeros(ndof, 1);
     du_tot = zeros(ndof, 1);
+    dl = zeros(nelm, 1);
+    es = zeros(3, nelm);
+    ep_eff = zeros(nelm, 1);
     
     %%% Correcting %%%
     nsteps = 0;
@@ -63,7 +47,6 @@ for k = 1:nsteps
         % New algorithmic tangent each correction step
         
         % Stiffness matrix
-%         X = zeros(nelm*nne, 1);
         K = zeros(ndof);
         for elm = 1:nelm
             % Extracting dofs, coords, disps
@@ -72,14 +55,11 @@ for k = 1:nsteps
             eyk = ec(elm, 2:2:end);
             
             % Computing strains and then tangent material
-            Dk = Dats(es_old(:, elm), dl_old(elm), ep_eff_old(elm), Dstar, mp);
+            Dk = Dats(es(:, elm), dl(elm), ep_eff(elm), Dstar, mp);
             
             [Ke, ~] = plante(exk, eyk, ep, Dk, eq);
-%             k0 = ((elm - 1)*nne + 1); ke = (elm*nne);   % Indices of entries
-%             X(k0:ke) = Ke(:);
             K(elmdof, elmdof) = K(elmdof, elmdof) + Ke;
         end
-%         K = sparse(I, J, X);
         
         % Solving lienar system
         du = solveq(K, -res, [np bci]);
@@ -90,9 +70,11 @@ for k = 1:nsteps
         fint = zeros(ndof, 1);
         [~, et] = plants(ex, ey, ep, 0, uk(edof(:, 2:end)));
         et = et';
-        for elm = 1:size(edof, 1)
+        for elm = 1:nelm
             % Extracting dofs, coords, disps
             elmdof = edof(elm, 2:end);
+            exk = ec(elm, 1:2:end);
+            eyk = ec(elm, 2:2:end);
             
             % Computing strains and then stresses
             delta_et = et(:, elm) - et_old(:, elm);
@@ -111,12 +93,11 @@ for k = 1:nsteps
     end
     
     %%% Finnally updating converged quantites %%%
-    P(:, k) = fint;
-    U(:, k) = uk;
+    P(:, k+1) = fint;
+    U(:, k+1) = uk;
     es_old = es;
     et_old = et;
     ep_eff_old = ep_eff;
-    dl_old = dl;
     
     % Display some information
     fprintf('Step %i\n#lineqs: %i\n', k, nsteps);
