@@ -1,59 +1,98 @@
-%% Square
-ndof = 8;
-nelm = 2;
-edof = [1 1 2 3 4 5 6
-        2 1 2 5 6 7 8];
-enod = [1 1 2 3;
-        2 1 3 4];
-l = 10e-3;
-coord = [0 0
-         l 0
-         l l
-         0 l];
-cx = coord(:, 1);
-cy = coord(:, 2);
-ex = cx(enod(:, 2:end));
-ey = cy(enod(:, 2:end));
-ec = zeros(nelm, 2*3);
-ec(:, 1:2:end) = ex;
-ec(:, 2:2:end) = ey;
+%% Load project
+squareFactory;
 
-bc = [1 0
-      2 0
-      3 1
-      4 0
-      5 1
-      7 0];
-%% Material
-ptype = 1;
-t = 1e-3;
-ep = [ptype, t];
+% Linear elastic model
 E = 190e9;
 nu = 0.3;
-De = hooke(ptype, E, nu);
+Dstar = hooke(ptype, E, nu);
 
-Kinf = 300e6;
-h = 21e9;
-sy0 = 230e6;
-mp = [Kinf, h, sy0];
-update_vars = @(es_old, ep_eff_old, delta_eps) update_variables1(es_old, ...
-    ep_eff_old, delta_eps, De, mp);
-Dats = @(es_old, dl, ep_eff_old) alg_tan_stiff1(es_old, dl, ep_eff_old, ...
-    De, mp);
+%% Loading scheme
+load_steps = 50;                            % Number of loading steps
+unload_steps = load_steps;              
+total_load = -0.5e-3;                         % End load
+load_increment = total_load/load_steps;     % Incremental load
 
-npoints = 3;
-I = reshape(kron(edof(:, 2:end), ones(2*npoints, 1))', [], 1);
-J = reshape(kron(edof(:, 2:end), ones(2*npoints, 1)')', [], 1);
-K = @(Dats) aKSS(edof, ec, Dats, ep, I, J);
+% Final loading scheme
+loading = [ones(1, load_steps), -1*ones(1, unload_steps)]*load_increment;
+uload = kron(bc(:, 2), loading);
 
-f = @(u, update_variables) aFSS(edof, ec, u, update_variables, ep);
+%% Material 1
+mp1 = [300e6 21e9 230e6];
+[P1, U1, kappa1] = NRDCp(edof, ec, uload, np, Dstar, @update_variables1, ...
+    @alg_tan_stiff1, mp1, ep);
 
-dmax = -1e-4;
-nsteps = 10;
-dincr = dmax/nsteps;
-load = [0 ones(1, nsteps) -1*ones(1, nsteps)]*dincr;
-uload = kron(bc(:, 2), load);
+mp2 = [17 0.61 230e6];
+[P2, U2, kappa2] = NRDCp(edof, ec, uload, np, Dstar, @update_variables2, ...
+    @alg_tan_stiff2, mp2, ep);
 
-%% Load
-[P, U] = NRDCp(K, f, uload, bc(:, 1), ndof, nelm, update_vars, Dats);
-plot(-(U(5, :)), -(P(5, :)));
+%% Stresses
+es01 = yieldStress(kappa1(:, load_steps), enod, edof, @yieldstress1, mp1);
+esm1 = yieldStress(kappa1(:, load_steps + unload_steps), enod, edof, ...
+@yieldstress1, mp1);
+
+es02 = yieldStress(kappa2(:, load_steps), enod, edof, @yieldstress2, mp2);
+esm2 = yieldStress(kappa2(:, load_steps + unload_steps), enod, edof, ...
+@yieldstress2, mp2);
+
+%% Plot stresses
+sy0 = mp1(3);
+qmax = max(abs([es01(:); esm1(:); es02(:); esm2(:)]/sy0));
+
+figure();
+tiledlayout(2, 2);
+
+% Material 1
+ax1 = nexttile;
+fill(ax1, ex', ey', es01'/sy0, 'Linestyle', 'None');
+xticks({});
+yticks({});
+
+ylabel(ax1, '$\textbf{Material 1}$', 'Interpreter', 'Latex', 'FontSize', 12);
+title(ax1, 'Max Load');
+
+ax2 = nexttile;
+fill(ax2, ex', ey', esm1'/sy0, 'Linestyle', 'None');
+xticks({});
+yticks({});
+title(ax2, 'Zero Load');
+
+% Material 2
+ax3 = nexttile;
+fill(ax3, ex', ey', es02'/sy0, 'Linestyle', 'None');
+xticks({});
+yticks({});
+
+ylabel(ax3, '$\textbf{Material 2}$', 'Interpreter', 'Latex', 'FontSize', 12);
+
+ax4 = nexttile;
+fill(ax4, ex', ey', esm2'/sy0, 'Linestyle', 'None');
+xticks({});
+yticks({});
+
+axis([ax1 ax2 ax3 ax4], 'tight');
+
+cb = colorbar('Ticks', 0:ceil(qmax));
+cb.Layout.Tile = 'east';
+cb.Label.String = '$\sigma_{eff}/\sigma_{y0}$';
+cb.Label.Interpreter = 'Latex';
+cb.Label.FontSize = 14;
+
+caxis(ax1, [0 qmax]);
+caxis(ax2, [0 qmax]);
+caxis(ax3, [0 qmax]);
+caxis(ax4, [0 qmax]);
+
+%% Plot force-displacement curve
+disp_nodes = bc((bc(:, 2) ~= 0), 1);
+plot_dof = disp_nodes(1);
+
+figure;
+ax = nexttile;
+hold(ax, 'ON');
+plot(ax, -U1(plot_dof, :)*1e3, -P1(plot_dof, :), 'Displayname', 'Material 1');
+plot(ax, -U2(plot_dof, :)*1e3, -P2(plot_dof, :), 'Displayname', 'Material 2');
+xlabel('Displacement [mm]');
+ylabel('Force [N]');
+title('Force vs Displacement at load node');
+axis(ax, 'tight');
+legend('Location', 'southeast');

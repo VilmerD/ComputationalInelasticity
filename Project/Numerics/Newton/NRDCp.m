@@ -1,4 +1,4 @@
-function [P, U] = NRDCp(edof, ec, I, J, uload, np, Dstar, update_vars, ...
+function [P, U, kappa] = NRDCp(edof, ec,  uload, np, Dstar, update_vars, ...
     Dats, mp, ep)
 % NRFCSS loads the structure and computes the displacement with a
 % Newton-Raphson scheme
@@ -20,11 +20,14 @@ nf(np) = [];
 npoints = 3;
 nne = (2 * npoints)^2;  % Number of entries in stiffness matrix per element
 eq = [0; 0];
+I = reshape(kron(edof(:, 2:end), ones(2*npoints, 1))', [], 1);
+J = reshape(kron(edof(:, 2:end), ones(2*npoints, 1)')', [], 1);
 
 % Initializing quantities
 nsteps = size(uload, 2);
 P = zeros(ndof, nsteps);
 U = zeros(ndof, nsteps);
+kappa = zeros(nelm, nsteps);
 
 es_old = zeros(3, nelm);
 et_old = zeros(3, nelm);
@@ -47,10 +50,9 @@ for k = 1:nsteps
         % New algorithmic tangent each correction step
         
         % Stiffness matrix
-        K = zeros(ndof);
+        X = zeros(ndof, 1);
         for elm = 1:nelm
             % Extracting dofs, coords, disps
-            elmdof = edof(elm, 2:end);
             exk = ec(elm, 1:2:end);
             eyk = ec(elm, 2:2:end);
             
@@ -58,8 +60,11 @@ for k = 1:nsteps
             Dk = Dats(es(:, elm), dl(elm), ep_eff(elm), Dstar, mp);
             
             [Ke, ~] = plante(exk, eyk, ep, Dk, eq);
-            K(elmdof, elmdof) = K(elmdof, elmdof) + Ke;
+            k0 = 1 + (elm - 1)*nne;
+            ke = elm * nne;
+            X(k0:ke) = Ke;
         end
+        K = sparse(I, J, X);
         
         % Solving lienar system
         du = solveq(K, -res, [np bci]);
@@ -95,6 +100,7 @@ for k = 1:nsteps
     %%% Finnally updating converged quantites %%%
     P(:, k+1) = fint;
     U(:, k+1) = uk;
+    kappa(:, k+1) = ep_eff;
     es_old = es;
     et_old = et;
     ep_eff_old = ep_eff;

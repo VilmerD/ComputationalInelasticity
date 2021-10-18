@@ -1,4 +1,4 @@
-function es = stresses(edof, ec, u, ep, mp)
+function es = stresses(edof, ec, u, ep, stress)
 [ndof, nsteps] = size(u);
 
 es = zeros(ndof, nsteps);

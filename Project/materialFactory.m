@@ -20,9 +20,5 @@ ptype = 1;
 t = 1e-3;
 ep = [ptype t];
 
-% For assembling the sparse stiffness matrix
-I = reshape(kron(edof(:, 2:end), ones(2*npoints, 1))', [], 1);
-J = reshape(kron(edof(:, 2:end), ones(2*npoints, 1)')', [], 1);
-
 % Boundary condition
 np = bc(:, 1);
