@@ -3,7 +3,7 @@ materialFactory;
 load m1data.mat
 load m2data.mat
 
-%% Stresses
+%% Compute von Mises stresses
 load_steps = (size(P1, 2)-1)/2;
 unload_steps = load_steps;
 
@@ -21,7 +21,7 @@ esm2 = yieldStress(kappa2(:, load_steps + unload_steps), enod, edof, ...
 sy0 = 230e6;
 qmax = max(abs([es01(:); esm1(:); es02(:); esm2(:)]/sy0));
 
-figure();
+figure;
 tiledlayout(2, 2);
 
 % Material 1
@@ -79,48 +79,3 @@ ylabel('Force [N]');
 title('Force vs Displacement at load node');
 axis(ax, 'tight');
 legend('Location', 'southeast');
-
-%% Plot development of plastic response?
-steps = [25 50 75 100]+1;
-nsteps = numel(steps);
-[ha, pos] = tight_subplot(2, 4, [0.03, 0.02], [0.05 0.12], [0.05 0.05]);
-for k = 1:nsteps
-    step = steps(k);
-    ax1 = ha(k);
-    hold(ax1, 'ON');
-    pload = int32((50 - abs(step-51))/50*100);
-    title(ax1, sprintf('%i%%', pload));
-    ax2 = ha(nsteps + k);
-    hold(ax2, 'ON');
-    
-    % m1
-    kstep = kappa1(:, step);
-    dofp = find(kstep > 0);
-    dofe = (1:nelm)'; dofe(dofp) = [];
-    exel = ex(dofe, [1 2 3]); eyel = ey(dofe, [1 2 3]);
-    expl = ex(dofp, [1 2 3]); eypl = ey(dofp, [1 2 3]);
-    fill(ax1, exel', eyel', 1);
-    fill(ax1, expl', eypl', -1);
-    colormap(ax1, 'hot');
-    xticks(ax1, {});
-    yticks(ax1, {});
-
-    % m2
-    kstep = kappa2(:, step);
-    dofp = find(kstep > 0);
-    dofe = (1:nelm)'; dofe(dofp) = [];
-    exel = ex(dofe, [1 2 3]); eyel = ey(dofe, [1 2 3]);
-    expl = ex(dofp, [1 2 3]); eypl = ey(dofp, [1 2 3]);
-    fill(ax2, exel', eyel', 1);
-    fill(ax2, expl', eypl', -1);
-    colormap(ax2, 'hot');
-    xticks(ax2, {});
-    yticks(ax2, {});
-    axis([ax1, ax2], 'tight');
-end
-ax1 = ha(1);
-ylabel(ax1, '$\textbf{Material 1}$', 'Interpreter', 'Latex', 'FontSize', 12);
-ax2 = ha(nsteps+1);
-ylabel(ax2, '$\textbf{Material 2}$', 'Interpreter', 'Latex', 'FontSize', 12);
-sgtitle('Plastic response at different load levels');
-
