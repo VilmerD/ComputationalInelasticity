@@ -1,5 +1,5 @@
 %% Load project
-squareFactory;
+square_geometry;
 
 % Linear elastic model
 E = 190e9;

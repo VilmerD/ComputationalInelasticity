@@ -12,16 +12,12 @@ if esteff - sy(ep_eff_old) > 0
     
     % Solve for dl
     I = [0, 0.1];
-    [dl, ~, exitflag] = fzero(cond, I);
-    if exitflag ~= 1
-        errstruct.message = 'Could not solve plastic problem';
-        error(errstruct);
-    end
-%     dl = newton(cond, 0.00);
+    dl = fzero(cond, I);
     
     ep_eff = ep_eff_old + dl;
     es = es2(dl);
 else
+    % If not, the response is elastic
     dl = 0;
     
     ep_eff = ep_eff_old;

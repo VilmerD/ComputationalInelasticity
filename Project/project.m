@@ -1,5 +1,5 @@
 %% Load project
-materialFactory;
+geometry;
 
 % Linear elastic model
 E = 190e9;
