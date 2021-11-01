@@ -33,7 +33,7 @@ es_old = zeros(3, nelm);
 et_old = zeros(3, nelm);
 ep_eff_old = zeros(nelm, 1);
 for k = 1:nsteps
-    %%% Taking initial step %%%
+    %%% Initializing load quantities %%%
     res = zeros(ndof, 1);
     uk = U(:, k);
     fk = zeros(ndof, 1);
@@ -42,15 +42,14 @@ for k = 1:nsteps
     es = zeros(3, nelm);
     ep_eff = zeros(nelm, 1);
     
-    %%% Correcting %%%
+    %%% Loading and correcting %%%
     nsteps = 0;
     while nsteps == 0 || norm(res(nf)) > rtol*norm(res(np))
         % Find load
         bci = uload(:, k) - du_tot(np);
-        % New algorithmic tangent each correction step
         
         % Stiffness matrix
-        X = zeros(ndof, 1);
+        X = zeros(nne*nelm, 1);
         for elm = 1:nelm
             % Extracting dofs, coords, disps
             exk = ec(elm, 1:2:end);
