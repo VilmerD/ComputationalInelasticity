@@ -7,19 +7,19 @@ load m2data.mat
 f = figure;
 steps = [25 50 75 100]+1;
 nsteps = numel(steps);
-[ha, pos] = tight_subplot(2, 4, [0.03, 0.02], [0.05 0.12], [0.05 0.05]);
+tiledlayout(2, 4);
 gc = [1 1 1];
 tc = [0 0 0]; 
 for k = 1:nsteps
     step = steps(k);
-    ax1 = ha(k);
+    ax1 = nexttile;
     ax1.Color = gc;
     ax1.YAxis.Color = gc;
     ax1.XAxis.Color = gc;
     hold(ax1, 'ON');
     pload = int32((50 - abs(step-51))/50*100);
     title(ax1, sprintf('%i%%', pload));
-    ax2 = ha(nsteps + k);
+    ax2 = nexttile(nsteps + k);
     ax2.Color = gc;
     ax2.YAxis.Color = gc;
     ax2.XAxis.Color = gc;
@@ -63,10 +63,10 @@ for k = 1:nsteps
     
     axis([ax1, ax2], 'tight');
 end
-ax1 = ha(1);
+ax1 = nexttile(1);
 ylabel(ax1, '$\textbf{Material 1}$', 'Interpreter', 'Latex', 'FontSize', 12);
 ax1.YAxis.Label.Color = tc;
-ax2 = ha(nsteps+1);
+ax2 = nexttile(nsteps+1);
 ylabel(ax2, '$\textbf{Material 2}$', 'Interpreter', 'Latex', 'FontSize', 12);
 ax2.YAxis.Label.Color = tc;
 sgtitle('Plastic response at different load levels');
